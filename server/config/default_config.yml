@@ -1,5 +1,6 @@
 server:
-  port: 54
+  name: ServiceName
+  port: 3126
   max_workers: 32
   spin_down: true
 

@@ -10,6 +10,7 @@ func LoadConfig(path string, filename string) (*FacadeConfig, error) {
 	viper.SetDefault("server.port", 3126)
 	viper.SetDefault("server.max_workers", 32)
 	viper.SetDefault("server.spin_down", true)
+	viper.SetDefault("server.name", "FacadeServer")
 
 	viper.SetDefault("cache.ttl_ms", 1200000)
 	viper.SetDefault("cache.clean_ms", 3600000)
@@ -37,9 +38,10 @@ type FacadeConfig struct {
 
 // ServerProperties contains generic properties of the server.
 type ServerProperties struct {
-	Port       int  `mapstructure:"port"`        // Port for the server
-	MaxWorkers int  `mapstructure:"max_workers"` // Max workers
-	SpinDown   bool `mapstructure:"spin_down"`   // Spin down idle workers?
+	Port       int    `mapstructure:"port"`        // Port for the server
+	MaxWorkers int    `mapstructure:"max_workers"` // Max workers
+	SpinDown   bool   `mapstructure:"spin_down"`   // Spin down idle workers?
+	Name       string `mapstructure:"name"`        // Name for the service
 }
 
 // CacheProperties relates specifically to the cache.

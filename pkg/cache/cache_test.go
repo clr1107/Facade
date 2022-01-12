@@ -59,7 +59,7 @@ func TestCacheImpl_Put(t *testing.T) {
 
 func TestCacheImpl_PutExpiry(t *testing.T) {
 	c := NewCache(nil, nil)
-	_ = c.PutExpiry("key", NewCacheUnit(2, nil), time.Now().Add(time.Millisecond * 250)) // impl never errors
+	_ = c.PutExpiry("key", NewCacheUnit(2, nil), time.Now().Add(time.Millisecond*250)) // impl never errors
 
 	if val, ok := c.Get("key"); !ok || val != 2 {
 		t.Errorf("cache unit not (correctly) present immediately after adding, wanted %v got %v", 2, val)
@@ -99,7 +99,7 @@ func TestCacheImpl_SetExpiry(t *testing.T) {
 		t.Errorf("value incorrect got %v wanted %v", val, 7)
 	}
 
-	_ = c.SetExpiry("key", NewCacheUnit(8, nil), time.Now().Add(time.Millisecond * 250))
+	_ = c.SetExpiry("key", NewCacheUnit(8, nil), time.Now().Add(time.Millisecond*250))
 	if val, ok := c.Get("key"); !ok || val != 8 {
 		t.Errorf("cache unit not (correctly) present immediately after overwriting, wanted %v got %v", 8, val)
 	}
