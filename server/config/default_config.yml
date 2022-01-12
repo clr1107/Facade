@@ -1,0 +1,11 @@
+server:
+  port: 54
+  max_workers: 32
+  spin_down: true
+
+cache:
+  ttl_ms: 1200000
+  clean_ms: 3600000
+
+response:
+  raw: false

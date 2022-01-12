@@ -44,6 +44,7 @@ type Cacher interface {
     // Delete will remove the key from the cache. May return an error depending
 	// on impl.
 	Delete(key string) error
+	Clear()
 }
 
 // CacheImpl implements patrickmn's `go-cache`.
@@ -118,4 +119,8 @@ func (c *CacheImpl) GetDefault(key string, d interface{}) interface{} {
 func (c *CacheImpl) Delete(key string) error {
 	c.cache.Delete(key)
 	return nil
+}
+
+func (c *CacheImpl) Clear() {
+	c.cache.Flush()
 }
