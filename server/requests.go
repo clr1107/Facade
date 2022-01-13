@@ -1,4 +1,4 @@
-package requests
+package server
 
 // Server serves requests for content.
 type Server interface {

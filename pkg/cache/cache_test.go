@@ -48,7 +48,7 @@ func TestCacheImpl_GetDefault(t *testing.T) {
 
 func TestCacheImpl_Put(t *testing.T) {
 	c := NewCache(nil, nil)
-	_ = c.Put("key", NewCacheUnit(2, nil)) // impl never errors
+	_ = c.Put("key", NewCacheUnit(2, nil))
 
 	if val, ok := c.Get("key"); !ok {
 		t.Errorf("cache unit not present after adding")
@@ -59,7 +59,7 @@ func TestCacheImpl_Put(t *testing.T) {
 
 func TestCacheImpl_PutExpiry(t *testing.T) {
 	c := NewCache(nil, nil)
-	_ = c.PutExpiry("key", NewCacheUnit(2, nil), time.Now().Add(time.Millisecond*250)) // impl never errors
+	_ = c.PutExpiry("key", NewCacheUnit(2, nil), time.Now().Add(time.Millisecond*250))
 
 	if val, ok := c.Get("key"); !ok || val != 2 {
 		t.Errorf("cache unit not (correctly) present immediately after adding, wanted %v got %v", 2, val)

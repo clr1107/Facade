@@ -1,7 +1,7 @@
 package http
 
 import (
-	"github.com/clr1107/facade/server/requests"
+	"github.com/clr1107/facade/server"
 	"github.com/valyala/fasthttp"
 )
 
@@ -9,24 +9,24 @@ import (
 
 // HttpServer with FacadeServer embedded; using fasthttp.
 type HttpServer struct {
-	requests.FacadeServer
+	server.FacadeServer
 	httpServer *fasthttp.Server
 }
 
 func NewServer(name string, address string, port int) *HttpServer {
-	server := &HttpServer{
-		FacadeServer: requests.FacadeServer{
+	s := &HttpServer{
+		FacadeServer: server.FacadeServer{
 			Name:    name,
 			Address: address,
 			Port:    port,
 		},
 	}
-	server.httpServer = &fasthttp.Server{
-		Name:    server.Name,
-		Handler: server.handle,
+	s.httpServer = &fasthttp.Server{
+		Name:    s.Name,
+		Handler: s.handle,
 	}
 
-	return server
+	return s
 }
 
 func (server *HttpServer) handle(ctx *fasthttp.RequestCtx) {
