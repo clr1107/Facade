@@ -6,4 +6,7 @@
 *.out
 .idea/*
 plan.txt
-testing/
+/main.go
+/go.mod
+/go.sum
+.DS_Store

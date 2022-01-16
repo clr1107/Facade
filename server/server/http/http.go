@@ -18,33 +18,52 @@ type HttpServer struct {
 
 func NewServer(name string, address string, port int) *HttpServer {
 	s := &HttpServer{
-		FacadeServer: server.FacadeServer{
-			Name:    name,
-			Address: address,
-			Port:    port,
-		},
-		logger: server.SetupLogger(logging.DEBUG), // todo change
+		FacadeServer: server.NewFacadeServer(name, address, port),
+		logger: server.SetupLogger(logging.DEBUG), // todo config
 	}
 	s.httpServer = &fasthttp.Server{
 		Name:    s.Name,
-		Handler: s.handle,
+		Handler: s.handler,
+		ErrorHandler: s.errorHandler,
 	}
 
 	s.logger.Debugf("created new HttpServer `%s` to listen on `%s:%d`", name, address, port)
 	return s
 }
 
-func (server *HttpServer) handle(ctx *fasthttp.RequestCtx) {
-	// do smth
-	server.logger.Infof("<=== %s", ctx.RequestURI())
+func (server *HttpServer) handler(ctx *fasthttp.RequestCtx) {
+	server.logger.Debugf("server <=== %s", ctx.RequestURI())
+
+	if cached := server.GetCache(ctx.RequestURI()); cached != nil {
+		server.logger.Debugf("cache  ===> %s", ctx.RequestURI())
+		ctx.SetBody(cached)
+
+		return
+	}
+
+	// todo ok go outbound now
+
+	server.logger.Debugf("remote ===> %s", ctx.RequestURI())
+	ctx.SetBody([]byte("This will be the outbound..."))
 }
 
-func (server *HttpServer) Start() error {
-	server.logger.Debugf("starting HttpServer `%s` on `%s:%d`", server.Name, server.Address, server.Port)
-	return server.httpServer.ListenAndServe(server.Address + ":" + strconv.Itoa(server.Port))
+func (server *HttpServer) errorHandler(ctx *fasthttp.RequestCtx, err error) {
+	server.logger.Errorf("error dealing with request %s: %s", ctx.RequestURI(), err)
+	ctx.Error("Error", 500)
+}
+
+func (server *HttpServer) Start() {
+	server.logger.Infof("starting HttpServer `%s` on `%s:%d` ...", server.Name, server.Address, server.Port)
+
+	go func() {
+		server.Errors <- server.httpServer.ListenAndServe(server.Address + ":" + strconv.Itoa(server.Port))
+	}()
+
+	server.logger.Info("HttpServer started and listening")
 }
 
 func (server *HttpServer) Stop() error {
-	server.logger.Debugf("stopping HttpServer `%s`", server.Name)
+	server.logger.Info("stopping HttpServer `%s`", server.Name)
+	close(server.Errors)
 	return server.httpServer.Shutdown()
 }

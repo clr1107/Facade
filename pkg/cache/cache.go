@@ -52,7 +52,7 @@ type CacheImpl struct {
 	cache *gocache.Cache
 }
 
-func NewCache(defaultTtl *time.Duration, defaultClean *time.Duration) *CacheImpl {
+func NewCache(defaultTtl *time.Duration, defaultClean *time.Duration) Cacher {
 	var ttl, clean time.Duration
 
 	if defaultTtl == nil {
@@ -63,9 +63,9 @@ func NewCache(defaultTtl *time.Duration, defaultClean *time.Duration) *CacheImpl
 		clean = time.Minute * 15
 	}
 
-	return &CacheImpl{
+	return Cacher(&CacheImpl{
 		cache: gocache.New(ttl, clean),
-	}
+	})
 }
 
 func (c *CacheImpl) Put(key string, unit *unit) error {
