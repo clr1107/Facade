@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func SetupLogger(level logging.Level) *logging.Logger {
+func setupLogger(level logging.Level) *logging.Logger {
 	log := logging.MustGetLogger("facade")
 	format := logging.MustStringFormatter(
 		`%{color}[%{time:15:04:05}] [%{level}] (%{longfunc}): %{color:reset}%{message}`,
@@ -25,7 +25,7 @@ func SetupLogger(level logging.Level) *logging.Logger {
 type Server interface {
 	Start()
 	Stop() error
-	GetCache(request []byte) []byte
+	GetFromCache(request []byte) []byte
 }
 
 // FacadeServer contains all data and embeddings a Server would need.
@@ -36,6 +36,7 @@ type FacadeServer struct {
 	Port    int
 	Cache cache.Cacher
 	Errors chan error
+	Logger *logging.Logger
 }
 
 func NewFacadeServer(name string, address string, port int) FacadeServer {
@@ -44,11 +45,12 @@ func NewFacadeServer(name string, address string, port int) FacadeServer {
 		Address: address,
 		Port:    port,
 		Cache: cache.NewCache(nil, nil), // todo config
-		Errors: make(chan error),
+		Errors: make(chan error, 1),
+		Logger: setupLogger(logging.DEBUG), // todo config
 	}
 }
 
-func (server *FacadeServer) GetCache(request []byte) []byte {
+func (server *FacadeServer) GetFromCache(request []byte) []byte {
 	if cached, ok := server.Cache.Get(string(request)); ok {
 		if cast, ok := cached.([]byte); ok {
 			return cast

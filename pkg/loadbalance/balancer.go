@@ -1,13 +1,14 @@
 package loadbalance
 
 import (
+	"github.com/valyala/fasthttp"
 	"sync/atomic"
 )
 
 // BalancerMedium is a medium for balancing, e.g. a http proxy, or another
 // network interface to use.
 type BalancerMedium interface {
-
+	Apply(client *fasthttp.Client)
 }
 
 // Balancer is an interface for algorithms that can balance loads around
