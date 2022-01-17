@@ -3,7 +3,7 @@ package http
 import (
 	"fmt"
 	"github.com/clr1107/facade/pkg/cache"
-	srv "github.com/clr1107/facade/server"
+	"github.com/clr1107/facade/server/api"
 	"github.com/clr1107/facade/server/server"
 	"github.com/valyala/fasthttp"
 	"strconv"
@@ -11,7 +11,7 @@ import (
 
 // ---------- HttpServer ----------
 
-// HttpServer with FacadeServer embedded; using fasthttp.
+// HttpServer ; using fasthttp.
 type HttpServer struct {
 	server.FacadeServer
 	httpServer *fasthttp.Server
@@ -31,56 +31,66 @@ func NewServer(name string, address string, port int) *HttpServer {
 	return s
 }
 
-func (server *HttpServer) handler(ctx *fasthttp.RequestCtx) {
-	server.Logger.Debugf("server <=== %s", ctx.RequestURI())
+func (httpServer *HttpServer) handler(ctx *fasthttp.RequestCtx) {
+	httpServer.Logger.Debugf("httpServer <=== %s", ctx.RequestURI())
 
-	if cached := server.GetFromCache(ctx.RequestURI()); cached != nil {
-		server.Logger.Debugf("cache  ===> %s", ctx.RequestURI())
+	if cached := httpServer.GetFromCache(ctx.RequestURI()); cached != nil {
+		httpServer.Logger.Debugf("cache      ===> %s", ctx.RequestURI())
 		ctx.SetBody(cached)
 
 		return
 	}
 
-	server.Logger.Debugf("remote ===> %s", ctx.RequestURI())
-	pipe := srv.NewOutboundPipe([]byte("https://api.ipify.org?format=json")) // todo obviously for testing...
-	// todo load balancing
+	httpServer.Logger.Debugf("remote     ===> %s", ctx.RequestURI())
+
+	matcher, err := api.NewRedirectMatcher("https://api.ipify.org/") // todo matcher should be given.
+	if err != nil {
+		httpServer.Errors <- err
+		ctx.Error("error", 500)
+	}
+
+	pipe := matcher.Match(ctx.RequestURI())
+	if pipe == nil {
+		ctx.Error("could not match url given", 400)
+		return
+	}
 
 	if resp, err := pipe.Pull(); err != nil {
-		ctx.Error("an unknown error has occurred", 500)
-		server.Errors <- err
+		ctx.Error("an unknown error has occurred whilst pulling pipe", 500)
+		httpServer.Errors <- err
 	} else {
-		if err := server.Cache.Put(string(ctx.RequestURI()), cache.NewCacheUnit(resp, nil)); err != nil {
-			server.Errors <- err
+		if err := httpServer.Cache.Put(string(ctx.RequestURI()), cache.NewCacheUnit(resp, nil)); err != nil {
+			httpServer.Errors <- err
 		}
 
 		ctx.SetBody(resp)
 	}
 }
 
-func (server *HttpServer) errorHandler(ctx *fasthttp.RequestCtx, err error) {
-	server.Errors <- fmt.Errorf("error dealing with request %s: %s", ctx.RequestURI(), err)
-	ctx.Error("Error", 500)
+func (httpServer *HttpServer) errorHandler(ctx *fasthttp.RequestCtx, err error) {
+	httpServer.Errors <- fmt.Errorf("error dealing with request %s: %s", ctx.RequestURI(), err)
+	ctx.Error("internal server error", 500)
 }
 
-func (server *HttpServer) Start() {
-	server.Logger.Infof("starting HttpServer `%s` on `%s:%d` ...", server.Name, server.Address, server.Port)
+func (httpServer *HttpServer) Start() {
+	httpServer.Logger.Infof("starting HttpServer `%s` on `%s:%d` ...", httpServer.Name, httpServer.Address, httpServer.Port)
 
 	go func() {
-		err := server.httpServer.ListenAndServe(server.Address + ":" + strconv.Itoa(server.Port))
+		err := httpServer.httpServer.ListenAndServe(httpServer.Address + ":" + strconv.Itoa(httpServer.Port))
 		if err != nil {
-			server.Logger.Errorf("ListenAndServe: %s", err)
+			httpServer.Logger.Errorf("ListenAndServe: %s", err)
 		}
 	}()
 
-	server.Logger.Info("HttpServer started and listening")
+	httpServer.Logger.Info("HttpServer started and listening")
 }
 
-func (server *HttpServer) Stop() error {
-	server.Logger.Infof("stopping HttpServer `%s` ...", server.Name)
+func (httpServer *HttpServer) Stop() error {
+	httpServer.Logger.Infof("stopping HttpServer `%s` ...", httpServer.Name)
 
-	close(server.Errors)
-	err := server.httpServer.Shutdown()
+	close(httpServer.Errors)
+	err := httpServer.httpServer.Shutdown()
 
-	server.Logger.Info("stopped HttpServer `%s`", server.Name)
+	httpServer.Logger.Info("stopped HttpServer `%s`", httpServer.Name)
 	return err
 }
