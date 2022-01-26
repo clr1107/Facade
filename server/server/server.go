@@ -34,17 +34,19 @@ type FacadeServer struct {
 	Name    string
 	Address string
 	Port    int
-	Cache cache.Cacher
-	Errors chan error
+	Cache   cache.Cacher
+	Matcher Matcher
+	Errors  chan error
 	Logger *logging.Logger
 }
 
-func NewFacadeServer(name string, address string, port int) FacadeServer {
+func NewFacadeServer(name string, address string, port int, matcher Matcher) FacadeServer {
 	return FacadeServer{
 		Name:    name,
 		Address: address,
 		Port:    port,
 		Cache: cache.NewCache(nil, nil), // todo config
+		Matcher: matcher,
 		Errors: make(chan error, 1),
 		Logger: setupLogger(logging.DEBUG), // todo config
 	}

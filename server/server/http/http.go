@@ -3,7 +3,6 @@ package http
 import (
 	"fmt"
 	"github.com/clr1107/facade/pkg/cache"
-	"github.com/clr1107/facade/server/api"
 	"github.com/clr1107/facade/server/server"
 	"github.com/valyala/fasthttp"
 	"strconv"
@@ -17,9 +16,9 @@ type HttpServer struct {
 	httpServer *fasthttp.Server
 }
 
-func NewServer(name string, address string, port int) *HttpServer {
+func NewServer(name string, address string, port int, matcher server.Matcher) *HttpServer {
 	s := &HttpServer{
-		FacadeServer: server.NewFacadeServer(name, address, port),
+		FacadeServer: server.NewFacadeServer(name, address, port, matcher),
 	}
 	s.httpServer = &fasthttp.Server{
 		Name:    s.Name,
@@ -43,13 +42,7 @@ func (httpServer *HttpServer) handler(ctx *fasthttp.RequestCtx) {
 
 	httpServer.Logger.Debugf("remote     ===> %s", ctx.RequestURI())
 
-	matcher, err := api.NewRedirectMatcher("https://api.ipify.org/") // todo matcher should be given.
-	if err != nil {
-		httpServer.Errors <- err
-		ctx.Error("error", 500)
-	}
-
-	pipe := matcher.Match(ctx.RequestURI())
+	pipe := httpServer.Matcher.Match(ctx.RequestURI())
 	if pipe == nil {
 		ctx.Error("could not match url given", 400)
 		return

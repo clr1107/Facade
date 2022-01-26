@@ -1,43 +1,32 @@
 package api
 
 import (
-	"github.com/clr1107/facade/server/server"
+	srv "github.com/clr1107/facade/server/server"
 	"net/url"
 	"strings"
 	"sync"
 )
 
-type Matcher interface {
-	Match(request []byte) server.Pipe
-}
-
 // ---------- MultiMatcher ----------
 
 type MultiMatcher struct {
-	matchers []Matcher
+	matchers []srv.Matcher
 	mux *sync.RWMutex
 }
 
-func NewMultiMatcher(matchers []Matcher) *MultiMatcher {
-	return &MultiMatcher{
-		matchers: matchers,
-		mux: new(sync.RWMutex),
-	}
-}
-
-func (multiMatcher *MultiMatcher) AppendMatcher(matcher Matcher) {
+func (multiMatcher *MultiMatcher) AppendMatcher(matcher srv.Matcher) {
 	multiMatcher.mux.Lock()
 	multiMatcher.matchers = append(multiMatcher.matchers, matcher)
 	multiMatcher.mux.Unlock()
 }
 
-func (multiMatcher *MultiMatcher) PrependMatcher(matcher Matcher) {
+func (multiMatcher *MultiMatcher) PrependMatcher(matcher srv.Matcher) {
 	multiMatcher.mux.Lock()
-	multiMatcher.matchers = append([]Matcher{matcher}, multiMatcher.matchers...)
+	multiMatcher.matchers = append([]srv.Matcher{matcher}, multiMatcher.matchers...)
 	multiMatcher.mux.Unlock()
 }
 
-func (multiMatcher *MultiMatcher) Match(request []byte) server.Pipe {
+func (multiMatcher *MultiMatcher) Match(request []byte) srv.Pipe {
 	multiMatcher.mux.RLock()
 	defer multiMatcher.mux.RUnlock()
 
@@ -50,26 +39,46 @@ func (multiMatcher *MultiMatcher) Match(request []byte) server.Pipe {
 	return nil
 }
 
-// ---------- RedirectHostMatcher ----------
+// ---------- PredicatedMatcher ----------
 
-type RedirectHostMatcher struct {
-	Matcher
-	Host string
+type MatcherPredicate func(request []byte) bool
+
+type PredicatedMatcher struct {
+	predicate MatcherPredicate
+	matcher srv.Matcher
 }
 
-func NewRedirectMatcher(host string) (*RedirectHostMatcher, error) {
+func (pMatcher *PredicatedMatcher) Match(request []byte) srv.Pipe {
+	if pMatcher.predicate(request) {
+		return pMatcher.matcher.Match(request)
+	}
+
+	return nil
+}
+
+// ---------- API functions ----------
+
+func NewRedirectMatcher(host string) (*srv.RedirectHostMatcher, error) {
 	u, err := url.Parse(host)
 	if err != nil {
 		return nil, err
 	}
 
-	return &RedirectHostMatcher{
+	return &srv.RedirectHostMatcher{
 		Host: strings.TrimSuffix(u.String(), "/"),
 	}, nil
 }
 
-func (matcher RedirectHostMatcher) Match(request []byte) server.Pipe {
-	return server.NewOutboundPipe(
-		[]byte(matcher.Host + string(request)),
-	)
+func NewMultiMatcher(matchers ...srv.Matcher) *MultiMatcher {
+	return &MultiMatcher{
+		matchers: matchers,
+		mux: new(sync.RWMutex),
+	}
+}
+
+func NewPredicateMatcher(predicate MatcherPredicate, matcher srv.Matcher) *PredicatedMatcher {
+	return &PredicatedMatcher{
+		predicate: predicate,
+		matcher: matcher,
+	}
 }
